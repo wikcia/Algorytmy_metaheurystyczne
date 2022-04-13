@@ -5,6 +5,45 @@ import matplotlib.pyplot as plt
 import timeit
 
 
+def tabu_search(problem):
+    tabu_list = []
+    solution = random_solve(problem)  # rozwiazanie poczatkowe pi
+    time = 0.015
+
+    x = 1
+    while x == 1:
+        start = timeit.default_timer()
+        solution_cost = get_cost(problem, solution)
+        can_find_better_solution = True
+        while can_find_better_solution:
+            surrounding = invert(          # generowanie otoczenia
+                solution)  # surrounding to lista wszystkich rozwiazan do jakich mozna dojsc odwracajac ciag
+            new_solution = surrounding[0]  # inicjalizujemy new_solution
+            new_solution_cost = get_cost(problem, new_solution)
+            for possible_new_solution in surrounding:
+                current_cost = get_cost(problem, possible_new_solution)
+                if current_cost < new_solution_cost:  # weights decrease
+                    new_solution_cost = current_cost
+                    new_solution = possible_new_solution
+            if new_solution_cost >= solution_cost:  # nie moze znalezc lepszego rozwiazania
+                can_find_better_solution = False
+            else:
+                if new_solution not in tabu_list:
+                    solution = new_solution
+                    tabu_list.append(solution)
+                    solution_cost = new_solution_cost
+
+        stop = timeit.default_timer()
+        difference = stop - start
+        print(difference)
+        if difference > time:
+            x = 0
+
+    print(tabu_list)
+    print('Solution cost:')
+    print(solution_cost)
+
+
 def invert(solution: list):
     neighbours = []
     for i in range(len(solution)):
@@ -167,15 +206,15 @@ def repetitive_nearest_neighbour_get_results(problem):
 
 def main():
     problem = tsplib95.load(
-        '/Users/wiktoriapazdzierniak/Documents/Studia /4_SEM/Algorytmy metaheurystyczne/Zajecia_1/Data/ALL_tsp/ulysses22.tsp')
+        '/Users/wiktoriapazdzierniak/Documents/Studia /4_SEM/Algorytmy metaheurystyczne/Zajecia_1/Data/bays29.tsp')
 
     problem_opt = tsplib95.load(
-        '/Users/wiktoriapazdzierniak/Documents/Studia /4_SEM/Algorytmy metaheurystyczne/Zajecia_1/Data/ALL_tsp/berlin52.tsp')
+        '/Users/wiktoriapazdzierniak/Documents/Studia /4_SEM/Algorytmy metaheurystyczne/Zajecia_1/Data/bays29.opt.tour')
 
-    random_solve(problem)
+    #random_solve(problem)
 
-    compare_time(problem)
-
+    #compare_time(problem)
+    """
     print('k_random:')
     print(k_random(problem, 25))
     print('NN:')
@@ -183,11 +222,15 @@ def main():
 
     print('RNN:')
     print(repetitive_nearest_neighbour_get_results(problem))
-    print('two_opt:')
-    print(two_opt(problem))
-    print_tour(problem)
+    """
+
+    #print('two_opt:')
+    #print(two_opt(problem))
+    #print_tour(problem)
     print('optimal:')
     print(get_cost(problem, problem_opt.tours[0]))
+
+    tabu_search(problem)
 
 
 def compare_time(problem2):
