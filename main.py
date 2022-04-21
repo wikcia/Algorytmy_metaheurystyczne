@@ -3,45 +3,90 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import timeit
+from time import time
 
 
-def tabu_search(problem):
-    tabu_list = []
-    solution = random_solve(problem)  # rozwiazanie poczatkowe pi
-    time = 0.015
+def convert(list_to_tuple):
+    return tuple(list_to_tuple)
 
-    x = 1
-    while x == 1:
-        start = timeit.default_timer()
-        solution_cost = get_cost(problem, solution)
-        can_find_better_solution = True
-        while can_find_better_solution:
-            surrounding = invert(          # generowanie otoczenia
-                solution)  # surrounding to lista wszystkich rozwiazan do jakich mozna dojsc odwracajac ciag
-            new_solution = surrounding[0]  # inicjalizujemy new_solution
-            new_solution_cost = get_cost(problem, new_solution)
-            for possible_new_solution in surrounding:
-                current_cost = get_cost(problem, possible_new_solution)
-                if current_cost < new_solution_cost:  # weights decrease
-                    new_solution_cost = current_cost
-                    new_solution = possible_new_solution
-            if new_solution_cost >= solution_cost:  # nie moze znalezc lepszego rozwiazania
-                can_find_better_solution = False
-            else:
-                if new_solution not in tabu_list:
-                    solution = new_solution
-                    tabu_list.append(solution)
-                    solution_cost = new_solution_cost
 
-        stop = timeit.default_timer()
-        difference = stop - start
-        print(difference)
-        if difference > time:
-            x = 0
+def tabu_search(problem, tabu_size=1000):
+    max_time = 60 * 10
+    end_time = time() + max_time
 
-    print(tabu_list)
-    print('Solution cost:')
-    print(solution_cost)
+    starting_solution = random_solve(problem)
+    ending_cost = get_cost(problem, starting_solution)
+    ending_solution = starting_solution
+
+    tabu = dict()
+    counter = tabu_size
+    tabu[tuple(ending_solution)] = (counter, ending_cost)
+    current_solution = ending_solution.copy()
+    current_solution_cost = ending_cost
+
+    while time() < end_time:
+        surrounding = invert(current_solution)  # generujemy otoczenie za pomoca invert
+        neighbour_best_solution = None
+        neighbour_best_cost = np.inf
+        for neighbour in surrounding:
+            if tuple(neighbour) not in tabu.keys() or tabu[tuple(neighbour)][0] < 0:
+                neighbour_cost = get_cost(problem, neighbour)  # oblicz funkcje celu sasiada
+                if neighbour_cost < neighbour_best_cost:  # zamien jesli nowy sasiad ma mniejsza funkcje celu
+                    neighbour_best_solution = neighbour
+                    neighbour_best_cost = neighbour_cost
+
+        current_solution = neighbour_best_solution
+        current_solution_cost = neighbour_best_cost
+        tabu[tuple(current_solution)] = (counter, current_solution_cost)
+
+        for key, value in list(tabu.items()):
+            temp_counter, temp_cost = value
+            tabu[key] = (temp_counter - 1, temp_cost)
+
+        if current_solution_cost < ending_cost:
+            ending_cost = current_solution_cost
+            ending_solution = current_solution
+
+    for key, value in tabu.items():
+        print(key, ':', value, ':', get_cost(problem, key))
+
+    print('Tabu search cost:')
+    return get_cost(problem, ending_solution)
+
+
+"""
+def tabu_search(problem, tabu_size=1000):
+    max_time = 15
+    end_time = time() + max_time
+    print('starting time: ')
+    starting_solution = calculate_nearest_neighbour(problem, 1)
+    tabu = {}
+    ending_solution = starting_solution
+    counter = 0
+
+    while time() < end_time:
+        counter = counter + 1
+        surrounding = invert(ending_solution)  # generujemy otoczenie za pomoca invert
+        current_solution = None
+        current_solution_cost = get_cost(problem, ending_solution)
+
+        converted_surrounding = convert(surrounding)
+        for neighbour in (n for n in converted_surrounding if n not in tabu.keys()):
+            cost = get_cost(problem, neighbour)
+            if cost < current_solution_cost:
+                current_solution = neighbour
+                current_solution_cost = cost
+        if current_solution is None:
+            continue
+        ending_solution = current_solution
+        tabu[current_solution] = (counter, current_solution_cost)
+        tabu = {k: (j, val) for k, (j, val) in tabu.items() if counter - tabu_size < j}
+
+    print('ending time: ')
+
+    return get_cost(problem, ending_solution)
+
+"""
 
 
 def invert(solution: list):
@@ -55,6 +100,7 @@ def invert(solution: list):
 def two_opt(problem):
     solution = random_solve(problem)
     solution_cost = get_cost(problem, solution)
+    tabu = {'1': '3000', '3': '3400'}
     can_find_better_solution = True
     while can_find_better_solution:
         surrounding = invert(
@@ -211,9 +257,9 @@ def main():
     problem_opt = tsplib95.load(
         '/Users/wiktoriapazdzierniak/Documents/Studia /4_SEM/Algorytmy metaheurystyczne/Zajecia_1/Data/bays29.opt.tour')
 
-    #random_solve(problem)
+    # random_solve(problem)
 
-    #compare_time(problem)
+    # compare_time(problem)
     """
     print('k_random:')
     print(k_random(problem, 25))
@@ -224,13 +270,13 @@ def main():
     print(repetitive_nearest_neighbour_get_results(problem))
     """
 
-    #print('two_opt:')
-    #print(two_opt(problem))
-    #print_tour(problem)
+    print('two_opt:')
+    print(two_opt(problem))
+    # print_tour(problem)
     print('optimal:')
     print(get_cost(problem, problem_opt.tours[0]))
-
-    tabu_search(problem)
+    print('Tabu search cost:')
+    print(tabu_search(problem))
 
 
 def compare_time(problem2):
